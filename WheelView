@@ -1,4 +1,4 @@
-package com.example.androidtest;
+package com.example.androidtest.repository;
 
 import android.app.Activity;
 import android.content.Context;
@@ -68,9 +68,10 @@ public class WheelView extends ScrollView {
 	private List<String> getItems() {
 		return items;
 	}
-	
+
 	/**
 	 * 讲传入list中的值放进LinearLayout中，并设置样式后刷新
+	 * 
 	 * @param list
 	 */
 	public void setItems(List<String> list) {
@@ -84,9 +85,24 @@ public class WheelView extends ScrollView {
 		 * 根据理解应该是第一个元素和最后一个元素选中时，其上方和下方还要多出一个元素，所以在这里进行添加
 		 * 因为items已经有元素了，然后在0处添加数据，整体往后移动一位，再在最后加一位
 		 */
-		for (int i = 0; i < offset; i++) {
-			items.add(0, "");
-			items.add("");
+//		for (int i = 0; i < offset; i++) {
+//			items.add(0, "");
+//			items.add("");
+//		}
+		if (displayItemCount % 2 != 0) {
+			for (int i = 0; i < offset; i++) {
+				items.add(0, "");
+				items.add("");
+			}
+		} else if (displayItemCount % 2 == 0) {
+			for (int i = 0; i < offset; i++) {
+				if (i == 0) {
+					items.add(0, "");
+					items.add("");
+				} else {
+					items.add("");
+				}
+			}
 		}
 		initData();
 
@@ -110,6 +126,16 @@ public class WheelView extends ScrollView {
 	 * 每页显示的数量
 	 */
 	int displayItemCount;
+
+	public void setDisplayItemCount(int displayItemCount) {
+		this.displayItemCount = displayItemCount;
+		if (displayItemCount % 2 == 0) {
+			setOffset((displayItemCount - 1) / 2 + 1);
+		} else if (displayItemCount % 2 != 0) {
+			setOffset((displayItemCount - 1) / 2);
+		}
+	}
+
 	/**
 	 * 选中的号码
 	 */
@@ -152,15 +178,17 @@ public class WheelView extends ScrollView {
 					 * 序数
 					 */
 					final int divided = initialY / itemHeight;
-//					Log.e(TAG, "initialY: " + initialY);
-//					Log.e(TAG, "remainder: " + remainder + ", divided: "
-//							+ divided);
+					// Log.e(TAG, "initialY: " + initialY);
+					// Log.e(TAG, "remainder: " + remainder + ", divided: "
+					// + divided);
 					if (remainder == 0) {
-						selectedIndex = divided + offset;
+						// selectedIndex = divided + offset;
+						selectedIndex = (displayItemCount % 2) != 0 ? (divided + offset)
+								: (divided + offset) - 1;
 						// 回调函数，执行自定义功能
 						onSeletedCallBack();
 					} else {
-						//当当前项的字超过线
+						// 当当前项的字超过线
 						if (remainder > itemHeight / 2) {
 							/**
 							 * 自动定位到顶部： 比如： scrollView.post(new Runnable() {
@@ -173,7 +201,10 @@ public class WheelView extends ScrollView {
 									// ScrollTo方法设置滚动的位置
 									WheelView.this.smoothScrollTo(0, initialY
 											- remainder + itemHeight);
-									selectedIndex = divided + offset + 1;
+									selectedIndex = (displayItemCount % 2) != 0 ? (divided
+											+ offset + 1)
+											: (divided + offset);
+									// selectedIndex = divided + offset + 1;
 									// 回调函数，执行自定义功能
 									onSeletedCallBack();
 								}
@@ -184,7 +215,9 @@ public class WheelView extends ScrollView {
 								public void run() {
 									WheelView.this.smoothScrollTo(0, initialY
 											- remainder);
-									selectedIndex = divided + offset;
+									// selectedIndex = divided + offset;
+									selectedIndex = (displayItemCount % 2) != 0 ? (divided + offset)
+											: (divided + offset - 1);
 									// 回调函数，执行自定义功能
 									onSeletedCallBack();
 								}
@@ -210,7 +243,7 @@ public class WheelView extends ScrollView {
 		/**
 		 * 每页默认显示3个
 		 */
-		displayItemCount = offset * 2 + 1;
+//		displayItemCount = offset * 2 + 1;
 
 		for (String item : items) {
 			views.addView(createView(item));
@@ -279,15 +312,31 @@ public class WheelView extends ScrollView {
 		int remainder = y % itemHeight;
 		int divided = y / itemHeight;
 
-		if (remainder == 0) {
-			// 因为0位是空，所以需要从1开始
-			position = divided + offset;
-		} else {
-			if (remainder > itemHeight / 2) {
-				position = divided + offset + 1;
+		// if (remainder == 0) {
+		// // 因为0位是空，所以需要从1开始
+		// position = divided + offset;
+		// } else {
+		// if (remainder > itemHeight / 2) {
+		// position = divided + offset + 1;
+		// }
+		// }
+		if (displayItemCount % 2 != 0) {
+			if (remainder == 0) {
+				position = divided + offset;
+			} else {
+				if (remainder > itemHeight / 2) {
+					position = divided + offset + 1;
+				}
+			}
+		} else if (displayItemCount % 2 == 0) {
+			if (remainder == 0) {
+				position = divided + offset - 1;
+			} else {
+				if (remainder > itemHeight / 2) {
+					position = divided + offset;
+				}
 			}
 		}
-
 		// 所有节点总数
 		int childSize = views.getChildCount();
 		// 循环设置item颜色
@@ -308,20 +357,28 @@ public class WheelView extends ScrollView {
 	 * 获取选中区域的边界
 	 */
 	int[] selectedAreaBorder;
-	
+
 	/**
 	 * 获取两条横线的位置
+	 * 
 	 * @return
 	 */
 	private int[] obtainSelectedAreaBorder() {
 		if (null == selectedAreaBorder) {
 			selectedAreaBorder = new int[2];
-			selectedAreaBorder[0] = itemHeight * offset;
-			selectedAreaBorder[1] = itemHeight * (offset + 1);
+			// selectedAreaBorder[0] = itemHeight * offset;
+			// selectedAreaBorder[1] = itemHeight * (offset + 1);
+			if (displayItemCount % 2 != 0) {
+				selectedAreaBorder[0] = itemHeight * offset;
+				selectedAreaBorder[1] = itemHeight * (offset + 1);
+			} else if (displayItemCount % 2 == 0) {
+				selectedAreaBorder[1] = itemHeight * offset;
+				selectedAreaBorder[0] = itemHeight * (offset - 1);
+			}
 		}
 		return selectedAreaBorder;
 	}
-	
+
 	/**
 	 * View的色图方法，注意中间的new Drawable
 	 */
